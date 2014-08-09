@@ -4,7 +4,6 @@ db =
   models: {}
   config: {}
   r: null
-  SEP
 
 Model = require('./Model')(db)
 
