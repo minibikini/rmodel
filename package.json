@@ -1,0 +1,31 @@
+{
+  "name": "rmodel",
+  "version": "0.0.1",
+  "description": "A simple OHM for Redis",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["redis", "orm", "ohm", "activerecord", "database", "db"],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/minibikini/rmodel.git"
+  },
+  "author": "Egor Kislitsyn <egor@kislitsyn.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/minibikini/rmodel/issues"
+  },
+  "homepage": "https://github.com/minibikini/rmodel",
+  "dependencies": {
+    "coffee-script": "^1.7.1",
+    "redis": "^0.11.0",
+    "validator": "^3.17.0"
+  },
+  "devDependencies": {
+    "chai": "^1.9.1",
+    "faker": "^1.0.1",
+    "gulp": "^3.8.7",
+    "gulp-mocha": "^0.5.2"
+  }
+}
