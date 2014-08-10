@@ -21,9 +21,14 @@ module.exports =
 
     @r = db.r = redis.createClient cfg.port, cfg.host
     db.r.select cfg.db
-
     db.config = cfg
     db.ns = ns if ns?
+    @r.on 'error', @onError
+
+    @
+
+  onError: (err) =>
+    console.error "Redis Error", err
 
   addModel: (model) ->
     db.models[model::constructor.name] = model
