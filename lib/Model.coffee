@@ -1,4 +1,7 @@
 validator = require 'validator'
+inflection = require 'inflection'
+typeOf = require 'typeof'
+async = require 'async'
 
 module.exports = (db) ->
   class RedisModel
@@ -69,14 +72,46 @@ module.exports = (db) ->
       data
 
     @get: (id, cb) ->
-      db.r.hgetall @getKey(id), (err, reply) =>
-        return cb err if err?
-
-        if reply?
+      if typeOf(id) is 'array'
+        async.map id, ((el, done) => @get el, done), cb
+      else
+        db.r.hgetall @getKey(id), (err, reply) =>
+          return cb err, reply if err? or not reply?
           model = new @
           model._data = @deserialize reply
+          cb err, model
 
-        cb err, model or reply
+    @getWith: (id, rels, cb) ->
+      rels = [rels] unless typeOf(rels) is 'array'
+      @get id, (err, model) ->
+        return cb err, model if err? or not model?
+        async.each rels, ((r, fn) -> model.get r, fn), (err) ->
+          cb err, model
+
+    get: (rel, cb) ->
+      c = @constructor
+
+      unless rel.name?
+        rel = name: rel
+
+      unless c.relationships and relation = c.relationships[rel.name]
+        return cb null, null
+
+      unless relation.type and relation.model and db.models[relation.model]
+        return cb null, null
+
+      switch c.relationships[rel.name].type
+        when 'hasMany' then @_getHasMany rel, cb
+        else cb null, null
+
+    _getHasMany: (rel, cb) ->
+      relation = @constructor.relationships[rel.name]
+      key = @getKey() + db.config.SEP + 'hasMany' + db.config.SEP + relation.model
+
+      db.r.smembers key, (err, ids) =>
+        db.models[relation.model].get ids, (err, records) =>
+          @[rel.name] = records
+          cb err, records
 
     # deletes hash by ID from db
     @del: (id, cb) -> db.r.del @getKey(id), cb
@@ -101,3 +136,11 @@ module.exports = (db) ->
       (new @ data).save cb
 
     toObject: -> @_data
+
+    @hasMany: (name, opts = {}) ->
+      @relationships ?= {}
+      opts.model ?= inflection.classify name
+      opts.type ?= 'hasMany'
+      opts.name ?= name
+      @relationships[name] = opts
+
