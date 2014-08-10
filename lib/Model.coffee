@@ -98,3 +98,5 @@ module.exports = (db) ->
     # Instantiate a new instance of the object and save.
     @create: (data, cb) ->
       (new @ data).save cb
+
+    toObject: -> @_data
