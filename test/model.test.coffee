@@ -2,7 +2,7 @@ should = require('chai').should()
 faker = require 'faker'
 rmodel = require("../lib")
 
-rmodel.init db: 1
+rmodel.init db: 1, prefix: "test:"
 
 User = require './models/User'
 
@@ -18,6 +18,7 @@ getFakeUserData = ->
 describe 'RedisModel', ->
   before (done) ->
     rmodel.r.flushall done
+
   after (done) ->
     rmodel.r.flushall done
 
