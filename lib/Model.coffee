@@ -2,6 +2,7 @@ validator = require 'validator'
 
 module.exports = (db) ->
   class RedisModel
+    @db: db
     @primaryKey: "id"
     constructor: (data = {}) ->
       Object.defineProperty @, 'prepend',
