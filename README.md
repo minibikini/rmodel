@@ -9,7 +9,8 @@
 `npm install rmodel`
 
 ### Wishlist
+- ID generation
 - Defaults
-- Relations
+- Relations: belongsTo, hasOne
 - Examples
 - More tests
