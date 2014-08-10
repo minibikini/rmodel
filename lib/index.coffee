@@ -26,4 +26,4 @@ module.exports =
     db.ns = ns if ns?
 
   addModel: (model) ->
-    models[model::constructor.name] = model
+    db.models[model::constructor.name] = model
