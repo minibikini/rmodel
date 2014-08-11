@@ -4,6 +4,7 @@ db =
   models: {}
   config: {}
   r: null
+  createId: require './createId'
 
 Model = require('./Model')(db)
 
@@ -32,3 +33,5 @@ module.exports =
 
   addModel: (model) ->
     db.models[model::constructor.name] = model
+
+  createId: db.createId

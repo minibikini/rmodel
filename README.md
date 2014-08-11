@@ -5,12 +5,12 @@
 - Getters/Setters
 - Model class and instance methods
 - Defaults
+- ID generation
 
 ### Install
 `npm install rmodel`
 
 ### Wishlist
-- ID generation
 - Relations: belongsTo, hasOne
 - Examples
 - More tests

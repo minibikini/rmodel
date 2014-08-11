@@ -64,3 +64,8 @@ describe 'RedisModel', ->
       should.exist user.likes
       user.likes.should.equal 'apples'
       done()
+
+    it 'should create an id', (done) ->
+      user = new User
+      should.exist user.id
+      done()

@@ -48,12 +48,16 @@ module.exports = (db) ->
       @applyDefaults()
 
     applyDefaults: ->
-      for key, opts of @constructor.schema when opts.default?
+      _c = @constructor
+
+      for key, opts of _c.schema when opts.default?
         @[key] = if typeOf(opts.default) is 'function'
           opts.default.call @, key
         else
           opts.default
 
+      if _c.schema.id? and not @id? and db.createId?
+        @id = db.createId _c.name
 
     @getKey: (id) ->
       db.config.prefix + @::constructor.name + db.config.SEP + id
