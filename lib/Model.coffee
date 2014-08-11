@@ -45,6 +45,15 @@ module.exports = (db) ->
 
       # load data
       @[key] = val for key, val of data
+      @applyDefaults()
+
+    applyDefaults: ->
+      for key, opts of @constructor.schema when opts.default?
+        @[key] = if typeOf(opts.default) is 'function'
+          opts.default.call @, key
+        else
+          opts.default
+
 
     @getKey: (id) ->
       db.config.prefix + @::constructor.name + db.config.SEP + id

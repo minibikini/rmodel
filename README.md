@@ -4,13 +4,13 @@
 - Easy API
 - Getters/Setters
 - Model class and instance methods
+- Defaults
 
 ### Install
 `npm install rmodel`
 
 ### Wishlist
 - ID generation
-- Defaults
 - Relations: belongsTo, hasOne
 - Examples
 - More tests

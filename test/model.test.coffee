@@ -19,8 +19,8 @@ describe 'RedisModel', ->
   before (done) ->
     rmodel.r.flushall done
 
-  after (done) ->
-    rmodel.r.flushall done
+  # after (done) ->
+  #   rmodel.r.flushall done
 
   describe 'Model Instance', ->
     user = null
@@ -51,3 +51,16 @@ describe 'RedisModel', ->
         user2.remove (err) ->
           should.not.exist err
           done()
+
+  describe 'Defaults', ->
+    it 'should have a property with a default value', (done) ->
+      user = new User getFakeUserData()
+      should.exist user.role
+      user.role.should.equal 'guest'
+      done()
+
+    it 'should have a property with a default defined by a function', (done) ->
+      user = new User getFakeUserData()
+      should.exist user.likes
+      user.likes.should.equal 'apples'
+      done()
