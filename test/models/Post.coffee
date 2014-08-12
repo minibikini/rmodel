@@ -5,3 +5,6 @@ module.exports = class Post extends RedisModel
     id: 'string'
     title: 'string'
     body: 'string'
+    userId: 'string'
+
+  @belongsTo 'user'

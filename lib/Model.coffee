@@ -77,14 +77,39 @@ module.exports = (db) ->
 
       db.r.hmset @getKey(), @_changes, (err, reply) =>
         return cb err, reply if err?
-        @_changes = {}
-        @_isNew = no
 
-        # Adding ID to the model index
-        idIndexKey = db.config.prefix + _c.name + "Ids"
-        db.r.sadd idIndexKey, @[_c.primaryKey], (err, reply) ->
-          return cb err, reply if err?
+        if not @_isNew
+          @_changes = {}
           cb err, @
+        else
+          @updateIndexes (err) =>
+            return cb err, reply if err?
+            @_changes = {}
+            @_isNew = no
+            cb err, @
+
+    updateIndexes: (cb) ->
+      _c = @constructor
+      tasks = []
+
+      # Adding ID to the model index
+      tasks.push (done) =>
+        idIndexKey = db.config.prefix + _c.name + "Ids"
+        db.r.sadd idIndexKey, @[_c.primaryKey], done
+
+      if _c.relationships
+        for name, opts of _c.relationships
+          do (name, opts) =>
+            switch opts.type
+              when 'belongsTo'
+                if @[opts.foreignKey]?
+                  tasks.push (done) =>
+                    key = db.config.prefix + opts.model + db.config.SEP + @[opts.foreignKey] + db.config.SEP + 'hasMany' + db.config.SEP  + _c.name
+                    db.r.sadd key, @id, done
+                    done()
+
+      async.parallel tasks, cb
+
 
     @deserialize: (data) ->
       for key, opts of @schema
@@ -127,6 +152,7 @@ module.exports = (db) ->
 
       switch c.relationships[rel.name].type
         when 'hasMany' then @_getHasMany rel, cb
+        when 'belongsTo' then @_getBelongsTo rel, cb
         else cb null, null
 
     _getHasMany: (rel, cb) ->
@@ -137,6 +163,13 @@ module.exports = (db) ->
         db.models[relation.model].get ids, (err, records) =>
           @[rel.name] = records
           cb err, records
+
+    _getBelongsTo: (rel, cb) ->
+      relation = @constructor.relationships[rel.name]
+      db.models[relation.model].get @[relation.foreignKey], (err, model) =>
+        return cb err if err?
+        @[rel.name] = model
+        cb null, model
 
     # deletes hash by ID from db
     @del: (id, cb) -> db.r.del @getKey(id), cb
@@ -167,6 +200,15 @@ module.exports = (db) ->
       opts.model ?= inflection.classify name
       opts.type ?= 'hasMany'
       opts.name ?= name
+      opts.foreignKey ?= inflection.camelize @::constructor.name + '_id', true
+      @relationships[name] = opts
+
+    @belongsTo: (name, opts = {}) ->
+      @relationships ?= {}
+      opts.model ?= inflection.classify name
+      opts.type ?= 'belongsTo'
+      opts.name ?= name
+      opts.foreignKey ?= name + 'Id'
       @relationships[name] = opts
 
     @count: (cb) ->

@@ -1,13 +1,16 @@
 should = require('chai').should()
 faker = require 'faker'
 rmodel = require("../lib")
+async = require 'async'
 
 rmodel.init db: 15, prefix: "test:"
 
 User = require './models/User'
+Post = require './models/Post'
+
+rmodel.addModels [User, Post, Comment]
 
 getFakeUserData = ->
-  id: faker.random.number([10000000000,90000000000])
   firstName: faker.Name.firstName()
   lastName: faker.Name.lastName()
   username: faker.Internet.userName()
@@ -45,7 +48,6 @@ describe 'RedisModel', ->
           record.should.have.property 'id'
           done()
 
-
     it 'should delete a model from db', (done) ->
       user2 = new User getFakeUserData()
       user2.save (err) ->
@@ -76,3 +78,34 @@ describe 'RedisModel', ->
         should.not.exist err
         count.should.be.a 'number'
         done()
+
+  describe 'Relations', ->
+    user = null
+
+    before (done) ->
+      user = new User getFakeUserData()
+      user.save ->
+        createPost = (n, cb) ->
+          post = new Post
+          post.userId = user.id
+          post.title = 'test'
+          post.body = 'test'
+          post.save cb
+
+        async.times 10, createPost, done
+
+    describe 'belongsTo', ->
+      it 'should load belongsTo with .get(relName)', (done) ->
+        post = new Post
+        post.userId = user.id
+        post.get 'user', (err, user2) ->
+          should.not.exist err
+          should.exist user2
+          done()
+
+      it 'should load hasMany with .get(relName)', (done) ->
+        user.get 'posts', (err, posts) ->
+          should.not.exist err
+          posts.should.be.an 'array'
+          posts.should.be.lengthOf 10
+          done()

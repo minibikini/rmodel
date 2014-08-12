@@ -19,6 +19,8 @@ module.exports = class User extends RedisModel
       type: 'string'
       default: (propName) -> 'apples'
 
+  @hasMany 'posts'
+
 
   fullName: ->
     @firstName + ' ' + @lastName
