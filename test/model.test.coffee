@@ -53,19 +53,17 @@ describe 'RedisModel', ->
           done()
 
   describe 'Defaults', ->
-    it 'should have a property with a default value', (done) ->
+    it 'should have a property with a default value', ->
       user = new User getFakeUserData()
       should.exist user.role
       user.role.should.equal 'guest'
-      done()
 
-    it 'should have a property with a default defined by a function', (done) ->
+    it 'should have a property with a default defined by a function', ->
       user = new User getFakeUserData()
       should.exist user.likes
       user.likes.should.equal 'apples'
-      done()
 
-    it 'should create an id', (done) ->
+    it 'should create an id', ->
       user = new User
       should.exist user.id
-      done()
+      user.id.should.lengthOf 32
