@@ -1,4 +1,5 @@
 redis = require 'redis'
+typeOf = require 'typeof'
 
 db =
   models: {}
@@ -33,5 +34,9 @@ module.exports =
 
   addModel: (model) ->
     db.models[model::constructor.name] = model
+
+  addModels: (models) ->
+    for model in models
+      db.models[model::constructor.name] = model
 
   createId: db.createId
