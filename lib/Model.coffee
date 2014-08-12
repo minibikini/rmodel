@@ -132,14 +132,24 @@ module.exports = (db) ->
           cb err, model
 
     @getWith: (id, rels, cb) ->
+      rels = [] unless rels?
       rels = [rels] unless typeOf(rels) is 'array'
+
       @get id, (err, model) ->
         return cb err, model if err? or not model?
-        async.each rels, ((r, fn) -> model.get r, fn), (err) ->
-          cb err, model
+
+        loadRels = (model, cb) ->
+          async.each rels, ((r, fn) -> model.get r, fn), (err) ->
+            cb err, model
+
+        if typeOf(model) is 'array'
+          async.map model, loadRels, cb
+        else
+          loadRels model, cb
 
     get: (rel, cb) ->
       c = @constructor
+      # return cb unless rel?
 
       unless rel.name?
         rel = name: rel
@@ -160,13 +170,13 @@ module.exports = (db) ->
       key = @getKey() + db.config.SEP + 'hasMany' + db.config.SEP + relation.model
 
       db.r.smembers key, (err, ids) =>
-        db.models[relation.model].get ids, (err, records) =>
+        db.models[relation.model].getWith ids, rel.with, (err, records) =>
           @[rel.name] = records
           cb err, records
 
     _getBelongsTo: (rel, cb) ->
       relation = @constructor.relationships[rel.name]
-      db.models[relation.model].get @[relation.foreignKey], (err, model) =>
+      db.models[relation.model].getWith @[relation.foreignKey], rel.with, (err, model) =>
         return cb err if err?
         @[rel.name] = model
         cb null, model

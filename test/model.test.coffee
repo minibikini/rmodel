@@ -7,6 +7,7 @@ rmodel.init db: 15, prefix: "test:"
 
 User = require './models/User'
 Post = require './models/Post'
+Comment = require './models/Comment'
 
 rmodel.addModels [User, Post, Comment]
 
@@ -90,9 +91,29 @@ describe 'RedisModel', ->
           post.userId = user.id
           post.title = 'test'
           post.body = 'test'
-          post.save cb
+          post.save (err) ->
+            createComment = (n, cb) ->
+              comment = new Comment
+              comment.userId = user.id
+              comment.postId = post.id
+              comment.body = 'test'
+              comment.save cb
+            async.times 2, createComment, cb
 
         async.times 10, createPost, done
+
+    it 'should load nested relations with .getWith', (done) ->
+      rels =
+        name: 'posts'
+        with:
+          name: 'comments'
+
+      User.getWith user.id, rels, (err, user2) ->
+        should.not.exist err
+        comment = user2.posts[0].comments[0]
+        comment.userId.should.equal user2.id
+        comment.postId.should.equal user2.posts[0].id
+        done()
 
     describe 'belongsTo', ->
       it 'should load belongsTo with .get(relName)', (done) ->

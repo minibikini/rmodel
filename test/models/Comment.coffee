@@ -1,11 +1,11 @@
 RedisModel = (require '../../lib').Model
 
-module.exports = class Post extends RedisModel
+module.exports = class Comment extends RedisModel
   @schema:
     id: 'string'
-    title: 'string'
     body: 'string'
     userId: 'string'
+    postId: 'string'
 
   @belongsTo 'user'
-  @hasMany 'comments'
+  @belongsTo 'post'
