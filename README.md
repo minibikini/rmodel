@@ -11,6 +11,6 @@
 `npm install rmodel`
 
 ### Wishlist
-- Relations: belongsTo, hasOne
+- Relations: hasOne
 - Examples
 - More tests
