@@ -7,7 +7,12 @@ module.exports = (db) ->
   class RedisModel
     @db: db
     @primaryKey: "id"
-    constructor: (data = {}) ->
+    constructor: (data = {}, isNew = yes) ->
+      Object.defineProperty @, 'isNew',
+        value: isNew
+        enumerable: no
+        writable: yes
+
       Object.defineProperty @, 'prepend',
         value: @constructor.name + db.config.SEP
         enumerable: no
@@ -90,7 +95,7 @@ module.exports = (db) ->
       else
         db.r.hgetall @getKey(id), (err, reply) =>
           return cb err, reply if err? or not reply?
-          model = new @
+          model = new @ {}, no
           model._data = @deserialize reply
           cb err, model
 
