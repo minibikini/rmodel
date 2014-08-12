@@ -2,7 +2,7 @@ should = require('chai').should()
 faker = require 'faker'
 rmodel = require("../lib")
 
-rmodel.init db: 1, prefix: "test:"
+rmodel.init db: 15, prefix: "test:"
 
 User = require './models/User'
 
@@ -19,8 +19,8 @@ describe 'RedisModel', ->
   before (done) ->
     rmodel.r.flushall done
 
-  # after (done) ->
-  #   rmodel.r.flushall done
+  after (done) ->
+    rmodel.r.flushall done
 
   describe 'Model Instance', ->
     user = null
@@ -67,3 +67,10 @@ describe 'RedisModel', ->
       user = new User
       should.exist user.id
       user.id.should.lengthOf 32
+
+  describe 'Model Class', ->
+    it '.count() should return a number of records', (done) ->
+      User.count (err, count) ->
+        should.not.exist err
+        count.should.be.a 'number'
+        done()

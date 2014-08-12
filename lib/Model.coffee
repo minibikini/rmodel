@@ -169,3 +169,6 @@ module.exports = (db) ->
       opts.name ?= name
       @relationships[name] = opts
 
+    @count: (cb) ->
+      key = @db.config.prefix + @::constructor.name + 'Ids'
+      @db.r.scard key, cb
