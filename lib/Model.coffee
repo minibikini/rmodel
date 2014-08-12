@@ -71,13 +71,20 @@ module.exports = (db) ->
       @constructor.getKey @[@constructor.primaryKey]
 
     save: (cb) ->
-      unless  @[@constructor.primaryKey]
+      _c = @constructor
+      unless  @[_c.primaryKey]
         return cb new Error "Primary key is required"
 
       db.r.hmset @getKey(), @_changes, (err, reply) =>
         return cb err, reply if err?
         @_changes = {}
-        cb err, reply
+        @_isNew = no
+
+        # Adding ID to the model index
+        idIndexKey = db.config.prefix + _c.name + "Ids"
+        db.r.sadd idIndexKey, @[_c.primaryKey], (err, reply) ->
+          return cb err, reply if err?
+          cb err, @
 
     @deserialize: (data) ->
       for key, opts of @schema
