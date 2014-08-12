@@ -28,7 +28,9 @@ describe 'RedisModel', ->
     it 'should save new model to db', (done) ->
       user = new User getFakeUserData()
       user.isChanged().should.be.true
+      user._isNew.should.be.true
       user.save (err) ->
+        user._isNew.should.be.false
         should.not.exist err
         user.isChanged().should.be.false
         done()

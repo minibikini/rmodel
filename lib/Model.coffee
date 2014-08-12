@@ -8,7 +8,7 @@ module.exports = (db) ->
     @db: db
     @primaryKey: "id"
     constructor: (data = {}, isNew = yes) ->
-      Object.defineProperty @, 'isNew',
+      Object.defineProperty @, '_isNew',
         value: isNew
         enumerable: no
         writable: yes
