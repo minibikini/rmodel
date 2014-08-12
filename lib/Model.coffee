@@ -106,7 +106,6 @@ module.exports = (db) ->
                   tasks.push (done) =>
                     key = db.config.prefix + opts.model + db.config.SEP + @[opts.foreignKey] + db.config.SEP + 'hasMany' + db.config.SEP  + _c.name
                     db.r.sadd key, @id, done
-                    done()
 
       async.parallel tasks, cb
 
