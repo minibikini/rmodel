@@ -35,13 +35,13 @@ module.exports = (db) ->
             enumerable: yes
             get: =>
               if opts.get?
-                opts.get.apply @, @_data[name]
+                opts.get.call @, @_data[name]
               else
                 @_data[name]
 
             set: (value) =>
               if opts.set?
-                value = opts.set.apply @, value
+                value = opts.set.call @, @_data[name], value
 
               if @_data[name] isnt value
                 @_changes[name] = value
@@ -70,7 +70,7 @@ module.exports = (db) ->
     getKey: ->
       @constructor.getKey @[@constructor.primaryKey]
 
-    save: (cb) ->
+    save: (cb = ->) ->
       _c = @constructor
       unless  @[_c.primaryKey]
         return cb new Error "Primary key is required"
