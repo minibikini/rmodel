@@ -55,7 +55,7 @@ module.exports = (db) ->
     applyDefaults: ->
       _c = @constructor
 
-      for key, opts of _c.schema when opts.default?
+      for key, opts of _c.schema when not @[key]? and opts.default?
         @[key] = if typeOf(opts.default) is 'function'
           opts.default.call @, key
         else
