@@ -199,8 +199,14 @@ module.exports = (db) ->
         !!Object.keys(@_changes).length
 
     # Instantiate a new instance of the object and save.
-    @create: (data, cb) ->
+    @create: (data, cb = ->) ->
       (new @ data).save cb
+
+    @update: (id, data, cb = ->) ->
+      @get id, (err, model) ->
+        return cb err if err?
+        model[key] = val for key, val of data
+        model.save cb
 
     toObject: -> @_data
 
