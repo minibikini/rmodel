@@ -50,7 +50,7 @@ module.exports = (db) ->
 
       # load data
       @[key] = val for key, val of data
-      @applyDefaults()
+      @applyDefaults() if isNew
 
     applyDefaults: ->
       _c = @constructor
