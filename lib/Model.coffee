@@ -77,16 +77,23 @@ module.exports = (db) ->
 
       db.r.hmset @getKey(), @_changes, (err, reply) =>
         return cb err, reply if err?
-
-        if not @_isNew
+        after = =>
+          _changes = @_changes
           @_changes = {}
           cb err, @
+          _c.afterSave @, _changes, _c.name
+
+        if not @_isNew
+          after()
         else
           @updateIndexes (err) =>
             return cb err, reply if err?
-            @_changes = {}
             @_isNew = no
-            cb err, @
+            after()
+
+    @afterSave: (model, changes, modelName) ->
+      if @db.afterSave?
+        @db.afterSave model, changes, modelName
 
     updateIndexes: (cb) ->
       _c = @constructor
