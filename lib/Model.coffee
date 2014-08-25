@@ -83,13 +83,13 @@ module.exports = (db) ->
           cb err, @
           _c.afterSave @, _changes, _c.name
 
-        if not @_isNew
+        # if not @_isNew
+        #   after()
+        # else
+        @updateIndexes (err) =>
+          return cb err, reply if err?
+          @_isNew = no
           after()
-        else
-          @updateIndexes (err) =>
-            return cb err, reply if err?
-            @_isNew = no
-            after()
 
     @afterSave: (model, changes, modelName) ->
       if @db.afterSave?
