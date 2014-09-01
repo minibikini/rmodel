@@ -23,6 +23,11 @@ module.exports = (db) ->
         enumerable: no
         writable: yes
 
+      Object.defineProperty @, '_orig',
+        value: {}
+        enumerable: no
+        writable: yes
+
       Object.defineProperty @, '_data',
         value: {}
         enumerable: no
@@ -43,7 +48,16 @@ module.exports = (db) ->
               if opts.set?
                 value = opts.set.call @, @_data[name], value
 
+              type = (opts.type or opts).toLowerCase()
+
+              value = switch type
+                when 'string' then validator.toString value
+                when 'number', 'float', 'int' then validator.toFloat value
+                when 'boolean' then validator.toBoolean value
+                else value
+
               if @_data[name] isnt value
+                @_orig[name] ?= @_data[name] if @_data[name]?
                 @_changes[name] = value
 
               @_data[name] = value
@@ -98,24 +112,31 @@ module.exports = (db) ->
     updateIndexes: (cb) ->
       _c = @constructor
       tasks = []
+      SEP = db.config.SEP
+      pfx = db.config.prefix
 
       # Adding ID to the model index
-      tasks.push (done) =>
-        idIndexKey = db.config.prefix + _c.name + "Ids"
-        db.r.sadd idIndexKey, @[_c.primaryKey], done
+      if @_isNew
+        tasks.push (done) =>
+          idIndexKey = pfx + _c.name + "Ids"
+          db.r.sadd idIndexKey, @[_c.primaryKey], done
 
       if _c.relationships
         for name, opts of _c.relationships
           do (name, opts) =>
             switch opts.type
               when 'belongsTo'
-                if @[opts.foreignKey]?
+                if @_orig[opts.foreignKey]? and @_orig[opts.foreignKey] not in ['']
                   tasks.push (done) =>
-                    key = db.config.prefix + opts.model + db.config.SEP + @[opts.foreignKey] + db.config.SEP + 'hasMany' + db.config.SEP  + _c.name
+                    key = pfx + opts.model + SEP + @_orig[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
+                    db.r.srem key, @id, done
+
+                if @_changes[opts.foreignKey]? and @_changes[opts.foreignKey] not in ['']
+                  tasks.push (done) =>
+                    key = pfx + opts.model + SEP + @_changes[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
                     db.r.sadd key, @id, done
 
       async.parallel tasks, cb
-
 
     @deserialize: (data) ->
       for key, opts of @schema
