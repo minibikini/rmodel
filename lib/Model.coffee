@@ -85,6 +85,7 @@ module.exports = (db) ->
       @constructor.getKey @[@constructor.primaryKey]
 
     save: (cb = ->) ->
+      return cb null, @ unless @isChanged()
       _c = @constructor
       unless  @[_c.primaryKey]
         return cb new Error "Primary key is required"
