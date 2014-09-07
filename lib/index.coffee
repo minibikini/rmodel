@@ -1,5 +1,5 @@
-redis = require 'redis'
-typeOf = require 'typeof'
+Promise = require 'bluebird'
+redis = Promise.promisifyAll require "redis"
 
 db =
   models: {}

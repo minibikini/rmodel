@@ -1,7 +1,8 @@
 validator = require 'validator'
 inflection = require 'inflection'
 typeOf = require 'typeof'
-async = require 'async'
+Promise = require 'bluebird'
+isArray = Array.isArray
 
 module.exports = (db) ->
   class RedisModel
@@ -84,33 +85,33 @@ module.exports = (db) ->
     getKey: ->
       @constructor.getKey @[@constructor.primaryKey]
 
-    save: (cb = ->) ->
-      return cb null, @ unless @isChanged()
+    _save: ->
       _c = @constructor
-      unless  @[_c.primaryKey]
-        return cb new Error "Primary key is required"
 
-      db.r.hmset @getKey(), @_changes, (err, reply) =>
-        return cb err, reply if err?
-        after = =>
+      unless @isChanged()
+        return Promise.resolve @
+
+      unless @[_c.primaryKey]
+        return Promise.reject new Error "#{_c.name} - Primary key is required"
+
+      db.r.hmsetAsync(@getKey(), @_changes).then =>
+        @updateIndexes().then =>
+          @_isNew = no
           _changes = @_changes
           @_changes = {}
-          cb err, @
           _c.afterSave @, _changes, _c.name
+          @
 
-        # if not @_isNew
-        #   after()
-        # else
-        @updateIndexes (err) =>
-          return cb err, reply if err?
-          @_isNew = no
-          after()
+    save: (cb) ->
+      promise = @_save()
+      promise.nodeify cb if cb?
+      promise
 
     @afterSave: (model, changes, modelName) ->
       if @db.afterSave?
         @db.afterSave model, changes, modelName
 
-    updateIndexes: (cb) ->
+    updateIndexes: ->
       _c = @constructor
       tasks = []
       SEP = db.config.SEP
@@ -118,29 +119,26 @@ module.exports = (db) ->
 
       # Adding ID to the model index
       if @_isNew
-        tasks.push (done) =>
-          idIndexKey = pfx + _c.name + "Ids"
-          db.r.sadd idIndexKey, @[_c.primaryKey], done
+        idIndexKey = pfx + _c.name + "Ids"
+        tasks.push db.r.saddAsync idIndexKey, @[_c.primaryKey]
 
       if _c.relationships
         for name, opts of _c.relationships
-          do (name, opts) =>
+          # do (name, opts) =>
             switch opts.type
               when 'belongsTo'
                 if @_orig[opts.foreignKey]? and @_orig[opts.foreignKey] not in ['']
-                  tasks.push (done) =>
-                    key = pfx + opts.model + SEP + @_orig[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
-                    db.r.srem key, @id, done
+                  key = pfx + opts.model + SEP + @_orig[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
+                  tasks.push db.r.sremAsync key, @id
 
                 if @_changes[opts.foreignKey]? and @_changes[opts.foreignKey] not in ['']
-                  tasks.push (done) =>
-                    key = pfx + opts.model + SEP + @_changes[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
-                    db.r.sadd key, @id, done
+                  key = pfx + opts.model + SEP + @_changes[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
+                  tasks.push db.r.saddAsync key, @id
 
-      async.parallel tasks, cb
+      Promise.all tasks
 
     @deserialize: (data) ->
-      for key, opts of @schema
+      for key, opts of @schema when data[key]?
         type = (opts.type or opts).toLowerCase()
         data[key] = switch type
           when 'string' then validator.toString data[key]
@@ -150,73 +148,83 @@ module.exports = (db) ->
       data
 
     @get: (id, cb) ->
-      if typeOf(id) is 'array'
-        async.map id, ((el, done) => @get el, done), cb
+      promise = if isArray id
+        Promise.map id, (id) => @get id
       else
-        db.r.hgetall @getKey(id), (err, reply) =>
-          return cb err, reply if err? or not reply?
+        db.r.hgetallAsync(@getKey id).then (reply) =>
+          return unless reply
           model = new @ {}, no
           model._data = @deserialize reply
-          cb err, model
+          model
 
-    @getWith: (id, rels, cb) ->
-      rels = [] unless rels?
-      rels = [rels] unless typeOf(rels) is 'array'
+      promise.nodeify cb if cb?
+      promise
 
-      @get id, (err, model) ->
-        return cb err, model if err? or not model?
+    @getWith: (id, rels = [], cb) ->
+      rels = [rels] unless isArray rels
+      rels = Promise.resolve rels
 
-        loadRels = (model, cb) ->
-          async.each rels, ((r, fn) -> model.get r, fn), (err) ->
-            cb err, model
+      promise = @get(id).then (model) =>
+        return unless model
 
-        if typeOf(model) is 'array'
-          async.map model, loadRels, cb
+        loadRels = (model) ->
+          rels.each((r) -> model.get r).then -> model
+
+        if isArray model
+          Promise.map model, loadRels
         else
-          loadRels model, cb
+          loadRels model
+
+      promise.nodeify cb if cb?
+      promise
 
     get: (rel, cb) ->
       c = @constructor
-      # return cb unless rel?
+      rel = name: rel unless rel.name?
 
-      unless rel.name?
-        rel = name: rel
+      hasRelation = (c.relationships and relation = c.relationships[rel.name]) and (relation.type and relation.model and db.models[relation.model])
 
-      unless c.relationships and relation = c.relationships[rel.name]
-        return cb null, null
+      promise = if hasRelation
+        switch c.relationships[rel.name].type
+          when 'hasMany' then @_getHasMany rel
+          when 'belongsTo' then @_getBelongsTo rel
+          else Promise.resolve()
+      else
+        Promise.resolve()
 
-      unless relation.type and relation.model and db.models[relation.model]
-        return cb null, null
+      promise.nodeify cb if cb?
+      promise
 
-      switch c.relationships[rel.name].type
-        when 'hasMany' then @_getHasMany rel, cb
-        when 'belongsTo' then @_getBelongsTo rel, cb
-        else cb null, null
-
-    _getHasMany: (rel, cb) ->
+    _getHasMany: (rel) ->
       relation = @constructor.relationships[rel.name]
       key = @getKey() + db.config.SEP + 'hasMany' + db.config.SEP + relation.model
 
-      db.r.smembers key, (err, ids) =>
-        db.models[relation.model].getWith ids, rel.with, (err, records) =>
-          @[rel.name] = records
-          cb err, records
+      db.r.smembersAsync(key).then (ids) =>
+        db.models[relation.model]
+          .getWith ids, rel.with
+          .then (records) => @[rel.name] = records
 
     _getBelongsTo: (rel, cb) ->
       relation = @constructor.relationships[rel.name]
-      db.models[relation.model].getWith @[relation.foreignKey], rel.with, (err, model) =>
-        return cb err if err?
-        @[rel.name] = model
-        cb null, model
+
+      db.models[relation.model]
+        .getWith @[relation.foreignKey], rel.with
+        .then (model) => @[rel.name] = model
 
     # deletes hash by ID from db
-    @del: (id, cb) -> db.r.del @getKey(id), cb
+    @del: (id, cb) ->
+      promise = db.r.delAsync @getKey(id)
+      promise.nodeify cb if cb?
+      promise
 
     # alias for @del
     @remove: (id, cb) ->
 
     # deletes hash from db
-    del: (cb) -> db.r.del @getKey(), cb
+    del: (cb) ->
+      promise = db.r.delAsync @getKey()
+      promise.nodeify cb if cb?
+      promise
 
     # alias for del
     remove: (cb) -> @del cb
@@ -228,14 +236,17 @@ module.exports = (db) ->
         !!Object.keys(@_changes).length
 
     # Instantiate a new instance of the object and save.
-    @create: (data, cb = ->) ->
+    @create: (data, cb) ->
       (new @ data).save cb
 
-    @update: (id, data, cb = ->) ->
-      @get id, (err, model) ->
-        return cb err if err?
+    @update: (id, data, cb) ->
+      promise = @get(id).then (model) ->
         model[key] = val for key, val of data
-        model.save cb
+        model.save()
+
+      promise = db.r.delAsync @getKey()
+      promise.nodeify cb if cb?
+      promise
 
     toObject: -> @_data
 
@@ -257,4 +268,6 @@ module.exports = (db) ->
 
     @count: (cb) ->
       key = @db.config.prefix + @::constructor.name + 'Ids'
-      @db.r.scard key, cb
+      promise = @db.r.scardAsync key
+      promise.nodeify cb if cb?
+      promise

@@ -1,13 +1,15 @@
 should = require('chai').should()
 faker = require 'faker'
 rmodel = require("../lib")
-async = require 'async'
+Promise = require 'bluebird'
 
 rmodel.init db: 15, prefix: "test:"
 
 User = require './models/User'
 Post = require './models/Post'
 Comment = require './models/Comment'
+
+times = (n, fn) -> fn(i) for i in [1..n]
 
 rmodel.addModels [User, Post, Comment]
 
@@ -86,21 +88,22 @@ describe 'RedisModel', ->
     before (done) ->
       user = new User getFakeUserData()
       user.save ->
-        createPost = (n, cb) ->
+        createPost = (n) ->
           post = new Post
           post.userId = user.id
           post.title = 'test'
           post.body = 'test'
-          post.save (err) ->
-            createComment = (n, cb) ->
-              comment = new Comment
-              comment.userId = user.id
-              comment.postId = post.id
-              comment.body = 'test'
-              comment.save cb
-            async.times 2, createComment, cb
 
-        async.times 10, createPost, done
+          createComment = ->
+            comment = new Comment
+            comment.userId = user.id
+            comment.postId = post.id
+            comment.body = 'test'
+            comment.save()
+
+          post.save().then -> Promise.all times 2, createComment
+
+        Promise.all(times 10, createPost).nodeify done
 
     it 'should load nested relations with .getWith', (done) ->
       rels =

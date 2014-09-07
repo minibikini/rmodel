@@ -6,6 +6,7 @@
 - Model class and instance methods
 - Defaults
 - ID generation
+- Promises
 
 ### Install
 `npm install rmodel`
@@ -15,7 +16,6 @@
 2. `coffeegulp test` or `coffeegulp test watch`
 
 ### Wishlist
-- Promisess
 - Relations: hasOne
 - Examples
 - More tests
