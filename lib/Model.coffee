@@ -124,16 +124,15 @@ module.exports = (db) ->
 
       if _c.relationships
         for name, opts of _c.relationships
-          # do (name, opts) =>
-            switch opts.type
-              when 'belongsTo'
-                if @_orig[opts.foreignKey]? and @_orig[opts.foreignKey] not in ['']
-                  key = pfx + opts.model + SEP + @_orig[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
-                  tasks.push db.r.sremAsync key, @id
+          switch opts.type
+            when 'belongsTo'
+              if @_orig[opts.foreignKey]? and @_orig[opts.foreignKey] not in ['']
+                key = pfx + opts.model + SEP + @_orig[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
+                tasks.push db.r.sremAsync key, @id
 
-                if @_changes[opts.foreignKey]? and @_changes[opts.foreignKey] not in ['']
-                  key = pfx + opts.model + SEP + @_changes[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
-                  tasks.push db.r.saddAsync key, @id
+              if @_changes[opts.foreignKey]? and @_changes[opts.foreignKey] not in ['']
+                key = pfx + opts.model + SEP + @_changes[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
+                tasks.push db.r.saddAsync key, @id
 
       Promise.all tasks
 
