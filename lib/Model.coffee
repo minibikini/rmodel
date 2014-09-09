@@ -49,13 +49,16 @@ module.exports = (db) ->
               if opts.set?
                 value = opts.set.call @, @_data[name], value
 
+              return if @_isNew and not value?
+
               type = (opts.type or opts).toLowerCase()
 
-              value = switch type
-                when 'string' then validator.toString value
-                when 'number', 'float', 'int' then validator.toFloat value
-                when 'boolean' then validator.toBoolean value
-                else value
+              if value?
+                value = switch type
+                  when 'string' then validator.toString value
+                  when 'number', 'float', 'int' then validator.toFloat value
+                  when 'boolean' then validator.toBoolean value
+                  else value
 
               if @_data[name] isnt value
                 @_orig[name] ?= @_data[name] if @_data[name]?
@@ -92,15 +95,28 @@ module.exports = (db) ->
         return Promise.resolve @
 
       unless @[_c.primaryKey]
-        return Promise.reject new Error "#{_c.name} - Primary key is required"
+        return Promise.reject new Error "#{_c.name} - Primary key `#{_c.primaryKey}` is required"
 
-      db.r.hmsetAsync(@getKey(), @_changes).then =>
-        @updateIndexes().then =>
-          @_isNew = no
-          _changes = @_changes
-          @_changes = {}
-          _c.afterSave @, _changes, _c.name
-          @
+      toSave = {}
+      toDelete = []
+      tasks = []
+
+      for key, val of @_changes
+        if typeOf(val) in ['null', 'undefined']
+          toDelete.push key
+        else
+          toSave[key] = val
+
+      tasks.push db.r.hdelAsync [@getKey()].concat toDelete if toDelete.length
+      tasks.push db.r.hmsetAsync @getKey(), toSave if Object.keys(toSave).length
+      tasks.push @updateIndexes()
+
+      Promise.all(tasks).then =>
+        _changes = @_changes
+        @_isNew = no
+        @_changes = {}
+        _c.afterSave @, _changes, _c.name
+        @
 
     save: (cb) ->
       promise = @_save()
@@ -126,11 +142,11 @@ module.exports = (db) ->
         for name, opts of _c.relationships
           switch opts.type
             when 'belongsTo'
-              if @_orig[opts.foreignKey]? and @_orig[opts.foreignKey] not in ['']
+              if @_orig[opts.foreignKey] and @_orig[opts.foreignKey] not in ['']
                 key = pfx + opts.model + SEP + @_orig[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
                 tasks.push db.r.sremAsync key, @id
 
-              if @_changes[opts.foreignKey]? and @_changes[opts.foreignKey] not in ['']
+              if @_changes[opts.foreignKey] and @_changes[opts.foreignKey] not in ['']
                 key = pfx + opts.model + SEP + @_changes[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
                 tasks.push db.r.saddAsync key, @id
 

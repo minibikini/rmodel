@@ -13,12 +13,16 @@ times = (n, fn) -> fn(i) for i in [1..n]
 
 rmodel.addModels [User, Post, Comment]
 
+getHash = (model, cb) ->
+  rmodel.r.hgetall model.getKey(), cb
+
 getFakeUserData = ->
   firstName: faker.Name.firstName()
   lastName: faker.Name.lastName()
   username: faker.Internet.userName()
   email: faker.Internet.email()
-  age: faker.random.number([1,100])
+  bio: faker.Lorem.sentence()
+  age: faker.random.number 1, 100
   isAdmin: no
 
 describe 'RedisModel', ->
@@ -40,6 +44,35 @@ describe 'RedisModel', ->
         should.not.exist err
         user.isChanged().should.be.false
         done()
+
+    it 'should ignore fields with `null` and `undefined` when saving a new model', (done) ->
+      userData = getFakeUserData()
+      userData.bio = null
+      userData.lastName = undefined
+      user = new User userData
+      user.save (err, user) ->
+        should.not.exist err
+        should.not.exist user.bio
+        should.not.exist user.lastName
+        done()
+
+
+    it 'should remove nulled fields from redis', (done) ->
+      user = new User getFakeUserData()
+      user.save (err, user) ->
+        console.error err, err.stack if err?
+        should.not.exist err
+        user.bio = null
+        user.lastName = undefined
+        user.save (err, user) ->
+          console.error err, err.stack if err?
+          getHash user, (err, hash) ->
+            console.error err, err.stack if err?
+            should.not.exist err
+            should.not.exist user.bio
+            should.not.exist user.lastName
+            done()
+
 
     it 'should get a record from db', (done) ->
       user = new User getFakeUserData()
