@@ -129,9 +129,9 @@ module.exports = (db) ->
 
     updateIndexes: ->
       _c = @constructor
-      tasks = []
-      SEP = db.config.SEP
       pfx = db.config.prefix
+      SEP = db.config.SEP
+      tasks = []
 
       # Adding ID to the model index
       if @_isNew
@@ -228,16 +228,35 @@ module.exports = (db) ->
 
     # deletes hash by ID from db
     @del: (id, cb) ->
-      promise = db.r.delAsync @getKey(id)
+      promise = @get(id).then (model) -> model.del()
       promise.nodeify cb if cb?
       promise
 
     # alias for @del
-    @remove: (id, cb) ->
+    @remove: (id, cb) -> @del id, cb
 
     # deletes hash from db
     del: (cb) ->
-      promise = db.r.delAsync @getKey()
+      _c = @constructor
+      pfx = db.config.prefix
+      SEP = db.config.SEP
+
+      tasks = []
+      id = @[_c.primaryKey]
+
+      idIndexKey = pfx + _c.name + "Ids"
+      tasks.push db.r.saddAsync idIndexKey, id
+
+      if _c.relationships
+        for name, opts of _c.relationships
+          switch opts.type
+            when 'belongsTo'
+              key = pfx + opts.model + SEP + @[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
+              tasks.push db.r.sremAsync key, id
+
+      tasks.push db.r.delAsync @getKey()
+
+      promise = Promise.all tasks
       promise.nodeify cb if cb?
       promise
 
