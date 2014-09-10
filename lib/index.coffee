@@ -5,6 +5,7 @@ db =
   models: {}
   config: {}
   r: null
+  Promise: Promise
   createId: require './createId'
 
   init: (cfg = {}, ns) ->
