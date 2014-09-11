@@ -210,21 +210,21 @@ module.exports = (db) ->
       promise.nodeify cb if cb?
       promise
 
-    _getHasMany: (rel) ->
-      relation = @constructor.relationships[rel.name]
+    _getHasMany: (query) ->
+      relation = @constructor.relationships[query.name]
       key = @getKey() + db.config.SEP + 'hasMany' + db.config.SEP + relation.model
 
       db.r.smembersAsync(key).then (ids) =>
         db.models[relation.model]
-          .getWith ids, rel.with
-          .then (records) => @[rel.name] = records
+          .getWith ids, query.with or relation.with
+          .then (records) => @[query.name] = records
 
-    _getBelongsTo: (rel, cb) ->
-      relation = @constructor.relationships[rel.name]
+    _getBelongsTo: (query) ->
+      relation = @constructor.relationships[query.name]
 
       db.models[relation.model]
-        .getWith @[relation.foreignKey], rel.with
-        .then (model) => @[rel.name] = model
+        .getWith @[relation.foreignKey], query.with or relation.with
+        .then (model) => @[query.name] = model
 
     # deletes hash by ID from db
     @del: (id, cb) ->
