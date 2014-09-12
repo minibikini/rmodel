@@ -1,7 +1,8 @@
-# RedisModel - a simple OHM (object hash mapper) for Redis
+# RedisModel - a simple Redis OHM (object hash mapper) for Node.js
 
 ### Features
 - Easy API
+- Associations (hasMany, belongsTo)
 - Getters/Setters
 - Model class and instance methods
 - Defaults
