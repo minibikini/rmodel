@@ -245,14 +245,19 @@ module.exports = (db) ->
       id = @[_c.primaryKey]
 
       idIndexKey = pfx + _c.name + "Ids"
-      tasks.push db.r.saddAsync idIndexKey, id
+      tasks.push db.r.sremAsync idIndexKey, id
 
       if _c.relationships
         for name, opts of _c.relationships
           switch opts.type
             when 'belongsTo'
-              key = pfx + opts.model + SEP + @[opts.foreignKey] + SEP + 'hasMany' + SEP  + _c.name
-              tasks.push db.r.sremAsync key, id
+              if foreignId = @[opts.foreignKey]
+                key = pfx + opts.model + SEP + foreignId + SEP + 'hasMany' + SEP  + _c.name
+                tasks.push db.r.sremAsync key, id
+
+              if foreignId = @_orig[opts.foreignKey]
+                key = pfx + opts.model + SEP + foreignId + SEP + 'hasMany' + SEP  + _c.name
+                tasks.push db.r.sremAsync key, id
 
       tasks.push db.r.delAsync @getKey()
 
