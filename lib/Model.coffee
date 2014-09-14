@@ -91,11 +91,11 @@ module.exports = (db) ->
     _save: ->
       _c = @constructor
 
-      unless @isChanged()
-        return Promise.resolve @
-
       unless @[_c.primaryKey]
         return Promise.reject new Error "#{_c.name} - Primary key `#{_c.primaryKey}` is required"
+
+      unless @isChanged()
+        return Promise.resolve @
 
       toSave = {}
       toDelete = []
