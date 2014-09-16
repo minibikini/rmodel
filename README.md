@@ -19,8 +19,8 @@
 
 ### Wishlist
 - Relations: hasOne
-- Indexes: by field name, unique
-- Rename model.get to model.populate''
+- Indexes: by field, unique
+- Rename model.get to model.populate
 - Write some docs
 - More examples
 - More tests
