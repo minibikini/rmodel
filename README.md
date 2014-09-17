@@ -8,6 +8,7 @@
 - Defaults
 - ID generation
 - Promises
+- Index by field value
 
 ### Install
 `npm install rmodel`
@@ -19,7 +20,7 @@
 
 ### Wishlist
 - Relations: hasOne
-- Indexes: by field, unique
+- Unique Index
 - Rename model.get to model.populate
 - Write some docs
 - More examples

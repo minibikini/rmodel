@@ -138,6 +138,17 @@ module.exports = (db) ->
         idIndexKey = pfx + _c.name + "Ids"
         tasks.push db.r.saddAsync idIndexKey, @[_c.primaryKey]
 
+      # Schema Indexes
+      for name, opts of _c.schema when opts.index
+        if @_orig[name] and @_orig[name] isnt ['']
+          key = pfx + _c.name + 'Idx' + SEP + name + SEP + @_orig[name]
+          tasks.push db.r.sremAsync key, @id
+
+        if @_changes[name] and @_changes[name] not in ['']
+          key = pfx + _c.name + 'Idx' + SEP + name + SEP + @_changes[name]
+          tasks.push db.r.saddAsync key, @id
+
+      # Associations Indexes
       if _c.relationships
         for name, opts of _c.relationships
           switch opts.type
@@ -174,6 +185,16 @@ module.exports = (db) ->
 
       promise.nodeify cb if cb?
       promise
+
+    @getBy: (idx, val, opts = {}) ->
+      modelName = @::constructor.name
+      pfx = db.config.prefix
+      SEP = db.config.SEP
+
+      key = pfx + modelName + 'Idx' + SEP + idx + SEP + val
+
+      db.r.smembersAsync(key).then (ids) =>
+        @getWith ids, opts.with
 
     @getWith: (id, rels = [], cb) ->
       rels = [rels] unless isArray rels
