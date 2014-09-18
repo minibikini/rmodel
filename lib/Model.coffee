@@ -304,7 +304,6 @@ module.exports = (db) ->
         model[key] = val for key, val of data
         model.save()
 
-      promise = db.r.delAsync @getKey()
       promise.nodeify cb if cb?
       promise
 
