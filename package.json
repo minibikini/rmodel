@@ -1,6 +1,6 @@
 {
   "name": "rmodel",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "A simple OHM for Redis",
   "main": "index.js",
   "scripts": {
