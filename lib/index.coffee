@@ -5,8 +5,9 @@ db =
   models: {}
   config: {}
   r: null
-  Promise: Promise
   createId: require './createId'
+  Promise: Promise
+  redis: redis
 
   init: (cfg = {}, ns) ->
     cfg.host ?= '127.0.0.1'
