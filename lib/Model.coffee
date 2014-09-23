@@ -1,5 +1,6 @@
 validator = require 'validator'
-inflection = require 'inflection'
+{classify, camelize} = require 'inflecto'
+
 typeOf = require 'typeof'
 Promise = require 'bluebird'
 isArray = Array.isArray
@@ -311,15 +312,15 @@ module.exports = (db) ->
 
     @hasMany: (name, opts = {}) ->
       @relationships ?= {}
-      opts.model ?= inflection.classify name
+      opts.model ?= classify name
       opts.type ?= 'hasMany'
       opts.name ?= name
-      opts.foreignKey ?= inflection.camelize @::constructor.name + '_id', true
+      opts.foreignKey ?= camelize @::constructor.name + '_id'
       @relationships[name] = opts
 
     @belongsTo: (name, opts = {}) ->
       @relationships ?= {}
-      opts.model ?= inflection.classify name
+      opts.model ?= classify name
       opts.type ?= 'belongsTo'
       opts.name ?= name
       opts.foreignKey ?= name + 'Id'

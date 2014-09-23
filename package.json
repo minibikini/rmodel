@@ -27,7 +27,7 @@
   "dependencies": {
     "bluebird": "^2.3.2",
     "coffee-script": "^1.8.0",
-    "inflection": "^1.4.2",
+    "inflecto": "^1.0.2",
     "redis": "^0.12.1",
     "typeof": "^1.0.0",
     "validator": "^3.17.0"
