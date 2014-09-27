@@ -290,6 +290,15 @@ module.exports = (db) ->
     # alias for del
     remove: (cb) -> @del cb
 
+    refresh: ->
+      _c = @constructor
+      db.r.hgetallAsync(@getKey()).then (reply) =>
+        return null unless reply
+        @_orig = {}
+        @_changes = {}
+        @_data = _c.deserialize reply
+        @
+
     isChanged: (prop) ->
       if prop
         @_changes.hasOwnProperty prop
